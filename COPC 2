@@ -1,0 +1,223 @@
+openapi: 3.1.0
+info:
+  title: API Assistant COPC – Extensions Avancées
+  version: 1.1.0
+  description: >
+    Extensions pour l’assistant qualité COPC. Ajoute des fonctionnalités avancées :
+    simulation d’évaluation, calibrage multi-évaluateurs, alertes qualité, vue plateau J-1,
+    et un assistant FAQ COPC v7.0.
+
+servers:
+  - url: https://api.copc-audit.com/v1
+    description: "Serveur principal de l’assistant qualité COPC"
+
+paths:
+
+  /simuler-evaluation:
+    post:
+      operationId: simulerEvaluationTransaction
+      summary: Simuler une évaluation COPC d’un échange client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - contenu
+              properties:
+                type:
+                  type: string
+                  enum: [chat, appel, email]
+                  description: "Type de canal analysé"
+                contenu:
+                  type: string
+                  description: "Texte brut de l’interaction ou transcription"
+      responses:
+        '200':
+          description: Résultat d’évaluation simulée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score:
+                    type: number
+                  erreursCritiques:
+                    type: array
+                    items:
+                      type: string
+                  recommandations:
+                    type: string
+        '400':
+          description: Requête invalide
+        '500':
+          description: Erreur serveur
+
+  /calibrage-multi-evaluateurs:
+    post:
+      operationId: analyserCalibrage
+      summary: Comparer les évaluations de plusieurs QA pour une même transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - grilles
+              properties:
+                grilles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      evaluateur:
+                        type: string
+                      score:
+                        type: number
+                      erreurs:
+                        type: array
+                        items:
+                          type: string
+      responses:
+        '200':
+          description: Synthèse des écarts et notation consolidée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synthese:
+                    type: string
+                  differences:
+                    type: array
+                    items:
+                      type: string
+                  notationConsolidee:
+                    type: string
+        '400':
+          description: Données incomplètes
+        '500':
+          description: Erreur serveur
+
+  /alertes-qualite:
+    post:
+      operationId: genererAlertesQualite
+      summary: Détecter automatiquement des alertes qualité
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - plateau
+                - historiqueScores
+              properties:
+                plateau:
+                  type: string
+                historiqueScores:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      semaine:
+                        type: string
+                      scoreMoyen:
+                        type: number
+      responses:
+        '200':
+          description: Alertes détectées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alertes:
+                    type: array
+                    items:
+                      type: string
+                  analyse:
+                    type: string
+        '400':
+          description: Historique manquant
+        '500':
+          description: Erreur serveur
+
+  /faq-copc:
+    post:
+      operationId: repondreQuestionCopc
+      summary: Répondre à une question sur la norme COPC v7.0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+              properties:
+                question:
+                  type: string
+                  description: "Exemple : À quoi correspond l’item 2.8 ?"
+      responses:
+        '200':
+          description: Réponse à la question normative
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reponse:
+                    type: string
+                  referenceNorme:
+                    type: string
+        '400':
+          description: Question vide
+        '500':
+          description: Erreur serveur
+
+  /etat-plateau:
+    get:
+      operationId: getEtatPlateau
+      summary: Obtenir un état synthétique du plateau à date
+      parameters:
+        - in: query
+          name: plateau
+          required: true
+          schema:
+            type: string
+          description: "Nom du plateau (ex : CAS, CAP, Prod B2B)"
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+          description: "Date du snapshot (par défaut : hier)"
+      responses:
+        '200':
+          description: État qualité du plateau
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tauxQA:
+                    type: number
+                  topErreurs:
+                    type: array
+                    items:
+                      type: string
+                  agentsCritiques:
+                    type: array
+                    items:
+                      type: string
+                  recommandations:
+                    type: string
+        '400':
+          description: Paramètre plateau requis
+        '500':
+          description: Erreur serveur
