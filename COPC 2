@@ -1,21 +1,22 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  title: API COPC Insights – Extensions Intelligentes
-  version: 1.0.1
+  title: API Assistant COPC – Extensions Avancées
+  version: 1.1.0
   description: >
-    Ce module complémentaire enrichit l’assistant COPC avec des fonctionnalités utiles :
-    réponses intelligentes à la norme COPC, calibrage multi-évaluateurs, détection automatique d’alertes qualité.
+    Extensions pour l’assistant qualité COPC. Ajoute des fonctionnalités avancées :
+    simulation d’évaluation, calibrage multi-évaluateurs, alertes qualité, vue plateau J-1,
+    et un assistant FAQ COPC v7.0.
 
 servers:
-  - url: https://api.copc-audit.com/v1
-    description: "Serveur complémentaire – Insights qualité"
+  - url: https://api.copc-insights.com/v1
+    description: "Serveur complémentaire – COPC Insights avancés"
 
 paths:
 
-  /faq-copc:
+  /simuler-evaluation:
     post:
-      operationId: repondreQuestionCopc
-      summary: Répondre à une question sur la norme COPC v7.0
+      operationId: simulerEvaluationTransaction
+      summary: Simuler une évaluation COPC d’un échange client
       requestBody:
         required: true
         content:
@@ -23,32 +24,41 @@ paths:
             schema:
               type: object
               required:
-                - question
+                - type
+                - contenu
               properties:
-                question:
+                type:
                   type: string
-                  description: "Exemple : Que dit l’item 3.5 sur la fréquence d’évaluation ?"
+                  enum: [chat, appel, email]
+                  description: "Type de canal analysé"
+                contenu:
+                  type: string
+                  description: "Texte brut de l’interaction ou transcription"
       responses:
         '200':
-          description: Réponse normative claire
+          description: Résultat d’évaluation simulée
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  reponse:
-                    type: string
-                  referenceNorme:
+                  score:
+                    type: number
+                  erreursCritiques:
+                    type: array
+                    items:
+                      type: string
+                  recommandations:
                     type: string
         '400':
-          description: Requête incomplète
+          description: Requête invalide
         '500':
           description: Erreur serveur
 
   /calibrage-multi-evaluateurs:
     post:
       operationId: analyserCalibrage
-      summary: Comparer plusieurs évaluations QA d’une même transaction
+      summary: Comparer les évaluations de plusieurs QA pour une même transaction
       requestBody:
         required: true
         content:
@@ -73,7 +83,7 @@ paths:
                           type: string
       responses:
         '200':
-          description: Résultat de l’analyse calibrage
+          description: Synthèse des écarts et notation consolidée
           content:
             application/json:
               schema:
@@ -81,19 +91,21 @@ paths:
                 properties:
                   synthese:
                     type: string
-                  divergences:
+                  differences:
                     type: array
                     items:
                       type: string
-                  notationReference:
+                  notationConsolidee:
                     type: string
+        '400':
+          description: Données incomplètes
         '500':
           description: Erreur serveur
 
   /alertes-qualite:
     post:
       operationId: genererAlertesQualite
-      summary: Détecter automatiquement les alertes qualité sur la base de données historiques
+      summary: Détecter automatiquement des alertes qualité
       requestBody:
         required: true
         content:
@@ -117,7 +129,7 @@ paths:
                         type: number
       responses:
         '200':
-          description: Liste des alertes détectées
+          description: Alertes détectées
           content:
             application/json:
               schema:
@@ -127,7 +139,85 @@ paths:
                     type: array
                     items:
                       type: string
-                  interpretation:
+                  analyse:
                     type: string
+        '400':
+          description: Historique manquant
+        '500':
+          description: Erreur serveur
+
+  /faq-copc:
+    post:
+      operationId: repondreQuestionCopc
+      summary: Répondre à une question sur la norme COPC v7.0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+              properties:
+                question:
+                  type: string
+                  description: "Exemple : À quoi correspond l’item 2.8 ?"
+      responses:
+        '200':
+          description: Réponse à la question normative
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reponse:
+                    type: string
+                  referenceNorme:
+                    type: string
+        '400':
+          description: Question vide
+        '500':
+          description: Erreur serveur
+
+  /etat-plateau:
+    get:
+      operationId: getEtatPlateau
+      summary: Obtenir un état synthétique du plateau à date
+      parameters:
+        - in: query
+          name: plateau
+          required: true
+          schema:
+            type: string
+          description: "Nom du plateau (ex : CAS, CAP, Prod B2B)"
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+          description: "Date du snapshot (par défaut : hier)"
+      responses:
+        '200':
+          description: État qualité du plateau
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tauxQA:
+                    type: number
+                  topErreurs:
+                    type: array
+                    items:
+                      type: string
+                  agentsCritiques:
+                    type: array
+                    items:
+                      type: string
+                  recommandations:
+                    type: string
+        '400':
+          description: Paramètre plateau requis
         '500':
           description: Erreur serveur
