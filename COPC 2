@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: API Assistant COPC – Extensions Avancées
   version: 1.1.0
